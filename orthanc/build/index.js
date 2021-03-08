@@ -2,6 +2,29 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./events/close.ts":
+/*!*************************!*\
+  !*** ./events/close.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "onClose": () => (/* binding */ onClose)
+/* harmony export */ });
+const onClose = (palantirWebSocket, rawMessage, code) => {
+  let userId = palantirWebSocket.socketToUserIdMap.get(palantirWebSocket.socket);
+
+  if (!userId) {
+    throw new Error('[onClose] user not found in context');
+  }
+
+  let users = palantirWebSocket.users;
+  users.removeUser(userId);
+};
+
+/***/ }),
+
 /***/ "./events/message.ts":
 /*!***************************!*\
   !*** ./events/message.ts ***!
@@ -20,17 +43,26 @@ const onMessage = (palantirWebSocket, rawMessage, isBinary) => {
   }
 
   let message = parseMessage(rawMessage);
-  console.log({
+  console.warn({
     message
   });
   palantirWebSocket.socket.send(deliveryMessage(message.id));
 
   switch (message.type) {
     case _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLClientMessageTypes.ConnectionInit:
-      console.log('[ConnectionInit] should add user');
+      console.warn('[ConnectionInit] new user joined');
       let user = JSON.parse(message.data);
       palantirWebSocket.users.addUser(user);
       palantirWebSocket.socketToUserIdMap.set(palantirWebSocket.socket, user.id);
+      palantirWebSocket.socket.subscribe('space/main'); // publish to subscribed users
+
+      let newUserMessage = {
+        data: JSON.stringify({
+          users: palantirWebSocket.users
+        }),
+        type: _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLServerMessageTypes.Users
+      };
+      palantirWebSocket.socket.publish('space/main', JSON.stringify(newUserMessage));
       break;
     // case PQLClientMessageTypes.Disconnected:
     //   console.log('[Disconnected] should remove user')
@@ -42,8 +74,10 @@ const onMessage = (palantirWebSocket, rawMessage, isBinary) => {
 
 function deliveryMessage(messageId) {
   let message = {
-    id: messageId,
-    type: _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLServerMessageTypes.Delivery
+    type: _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLServerMessageTypes.Delivery,
+    data: JSON.stringify({
+      messageId
+    })
   };
   return JSON.stringify(message);
 }
@@ -100,6 +134,7 @@ let PQLServerMessageTypes;
 
 (function (PQLServerMessageTypes) {
   PQLServerMessageTypes[PQLServerMessageTypes["Delivery"] = 0] = "Delivery";
+  PQLServerMessageTypes[PQLServerMessageTypes["Users"] = 1] = "Users";
 })(PQLServerMessageTypes || (PQLServerMessageTypes = {}));
 
 /***/ }),
@@ -240,31 +275,29 @@ var __webpack_exports__ = {};
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var uWebSockets_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! uWebSockets.js */ "uWebSockets.js");
 /* harmony import */ var uWebSockets_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(uWebSockets_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _events_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./events/message */ "./events/message.ts");
-/* harmony import */ var _model_Users__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./model/Users */ "./model/Users.ts");
+/* harmony import */ var _events_close__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./events/close */ "./events/close.ts");
+/* harmony import */ var _events_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./events/message */ "./events/message.ts");
+/* harmony import */ var _model_Users__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./model/Users */ "./model/Users.ts");
 /* Minimal SSL/non-SSL example */
+
 
 
 
 const port = 3001;
 const app = uWebSockets_js__WEBPACK_IMPORTED_MODULE_0___default().App();
-const users = new _model_Users__WEBPACK_IMPORTED_MODULE_2__.Users();
+const users = new _model_Users__WEBPACK_IMPORTED_MODULE_3__.Users();
 const socketToUserIdMap = new Map();
 app.ws('/*', {
-  open: ws => {
-    console.log('open called');
-    console.log('users', users.getUsers());
-  },
+  open: ws => {},
   message: (ws, message, isBinary) => {
     let palantirWebSocket = {
       socket: ws,
       users,
       socketToUserIdMap
     };
-    (0,_events_message__WEBPACK_IMPORTED_MODULE_1__.onMessage)(palantirWebSocket, message, isBinary);
+    (0,_events_message__WEBPACK_IMPORTED_MODULE_2__.onMessage)(palantirWebSocket, message, isBinary);
   },
-  drain: ws => {
-    console.log('WebSocket backpressure: ' + ws.getBufferedAmount());
+  drain: ws => {// console.log('WebSocket backpressure: ' + ws.getBufferedAmount())
   },
   close: (ws, code, message) => {
     let palantirWebSocket = {
@@ -272,11 +305,7 @@ app.ws('/*', {
       users,
       socketToUserIdMap
     };
-    console.log({
-      ws,
-      userId: socketToUserIdMap.get(ws)
-    });
-    console.log('WebSocket closed');
+    (0,_events_close__WEBPACK_IMPORTED_MODULE_1__.onClose)(palantirWebSocket, message, code);
   }
 });
 app.any('/palantir', res => {
@@ -284,9 +313,9 @@ app.any('/palantir', res => {
 });
 app.listen(port, token => {
   if (token) {
-    console.log(`Isengard is listening on ${port}`);
+    console.info(`Isengard is listening on ${port}`);
   } else {
-    console.log('So you have chosen… death.');
+    console.info('So you have chosen… death.');
   }
 });
 })();

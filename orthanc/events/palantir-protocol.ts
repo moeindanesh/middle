@@ -8,11 +8,12 @@ export enum PQLClientMessageTypes {
 
 export enum PQLServerMessageTypes {
   Delivery,
+  Users,
 }
 
-export interface PQLServerDeliveryMessage {
-  id: string
-  type: PQLServerMessageTypes.Delivery
+export interface PQLServerMessage {
+  type: PQLServerMessageTypes
+  data: string
 }
 
 export interface PQLClientMessage {

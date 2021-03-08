@@ -8,9 +8,8 @@ interface WebSocketMessageEvent extends Event {
 }
 
 export const usePalantir = () => {
-  let socket = new WebSocket(`${url}/palantir`)
-
   useEffect(() => {
+    let socket = new WebSocket(`${url}/palantir`)
     let initId = nanoid()
     let userId = nanoid()
 
@@ -50,5 +49,5 @@ export const usePalantir = () => {
       socket.removeEventListener('close', onClose)
       socket.removeEventListener('message', onMessage)
     }
-  }, [socket])
+  }, [])
 }

@@ -3,7 +3,7 @@ import {
   PalantirWebSocket,
   PQLClientMessage,
   PQLClientMessageTypes,
-  PQLServerDeliveryMessage,
+  PQLServerMessage,
   PQLServerMessageTypes,
 } from './palantir-protocol'
 
@@ -18,16 +18,27 @@ export const onMessage = (
 
   let message = parseMessage(rawMessage)
 
-  console.log({ message })
+  console.warn({ message })
 
   palantirWebSocket.socket.send(deliveryMessage(message.id))
 
   switch (message.type) {
     case PQLClientMessageTypes.ConnectionInit:
-      console.log('[ConnectionInit] should add user')
+      console.warn('[ConnectionInit] new user joined')
       let user: UserData = JSON.parse(message.data)
       palantirWebSocket.users.addUser(user)
       palantirWebSocket.socketToUserIdMap.set(palantirWebSocket.socket, user.id)
+      palantirWebSocket.socket.subscribe('space/main')
+
+      // publish to subscribed users
+      let newUserMessage: PQLServerMessage = {
+        data: JSON.stringify({ users: palantirWebSocket.users }),
+        type: PQLServerMessageTypes.Users,
+      }
+      palantirWebSocket.socket.publish(
+        'space/main',
+        JSON.stringify(newUserMessage),
+      )
       break
     // case PQLClientMessageTypes.Disconnected:
     //   console.log('[Disconnected] should remove user')
@@ -38,9 +49,9 @@ export const onMessage = (
 }
 
 function deliveryMessage(messageId: string): string {
-  let message: PQLServerDeliveryMessage = {
-    id: messageId,
+  let message: PQLServerMessage = {
     type: PQLServerMessageTypes.Delivery,
+    data: JSON.stringify({ messageId }),
   }
 
   return JSON.stringify(message)

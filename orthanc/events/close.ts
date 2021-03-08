@@ -3,7 +3,7 @@ import { PalantirWebSocket } from './palantir-protocol'
 export const onClose = (
   palantirWebSocket: PalantirWebSocket,
   rawMessage: ArrayBuffer,
-  isBinary: boolean,
+  code: number,
 ) => {
   let userId = palantirWebSocket.socketToUserIdMap.get(palantirWebSocket.socket)
   if (!userId) {

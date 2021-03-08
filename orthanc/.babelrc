@@ -1,0 +1,8 @@
+{
+  "presets": ["@babel/preset-typescript"],
+  "plugins": [
+    "macros",
+    "@babel/plugin-proposal-optional-chaining",
+    "@babel/plugin-proposal-logical-assignment-operators"
+  ]
+}

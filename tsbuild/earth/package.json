@@ -1,0 +1,17 @@
+{
+    "name": "@middle/earth",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT",
+    "dependencies": {
+        "cross-env": "^7.0.3"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.7",
+        "typescript": "^4.2.2"
+    },
+    "scripts": {
+        "build": "tsc --build",
+        "start": "yarn build && nodemon ./index.js"
+    }
+}

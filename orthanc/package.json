@@ -1,9 +1,21 @@
 {
-  "name": "orthanc",
+  "name": "@middle/orthanc",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "nanoid": "^3.1.20",
+    "uWebSockets.js": "uNetworking/uWebSockets.js#v18.14.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7",
+    "typescript": "^4.2.2",
+    "@babel/core": "^7.11.1",
+    "@babel/plugin-proposal-optional-chaining": "7.6.0"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "start": "yarn build && nodemon ./index.js"
   }
 }

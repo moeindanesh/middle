@@ -1,0 +1,56 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "es2020",
+    "lib": ["es2019", "es2020", "dom", "DOM.Iterable", "esnext.asynciterable"],
+
+    /* Strict Type-Checking Options */
+    "strict": true,
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+
+    /* Advanced Options */
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    "incremental": true,
+    "allowSyntheticDefaultImports": true,
+    // "noEmit": true,
+    "allowJs": false,
+    "sourceMap": false,
+    "composite": true,
+    "declaration": true,
+    "noImplicitAny": true,
+    "baseUrl": "./",
+    "rootDir": "./",
+    "outDir": "./tsbuild/",
+    "jsx": "preserve",
+    "preserveSymlinks": false,
+    "downlevelIteration": true,
+    "importHelpers": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@middle/earth/*": ["earth/*"],
+      "@middle/orthanc/*": ["orthanc/*"]
+    }
+  },
+  "references": [{ "path": "./earth" }, { "path": "./orthanc" }],
+  "include": [
+    "orthanc/**/*.ts",
+    "orthanc/**/*.tsx",
+    "orthanc/**/*.json",
+    "earth/**/*.ts",
+    "earth/**/*.tsx",
+    "earth/**/*.json"
+  ],
+  "exclude": [
+    "**/.*/",
+    "**/node_modules/**",
+    "**/tsbuild/**",
+    ".yarn",
+    ".yarn/cache"
+  ]
+}

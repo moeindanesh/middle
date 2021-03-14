@@ -42,10 +42,8 @@ const onMessage = (palantirWebSocket, rawMessage, isBinary) => {
     throw new Error('[onMessage] Binary messages not supported.');
   }
 
-  let message = parseMessage(rawMessage);
-  console.warn({
-    message
-  });
+  let message = parseMessage(rawMessage); // console.warn({ message })
+
   palantirWebSocket.socket.send(deliveryMessage(message.id));
 
   switch (message.type) {
@@ -57,12 +55,22 @@ const onMessage = (palantirWebSocket, rawMessage, isBinary) => {
       palantirWebSocket.socket.subscribe('space/main'); // publish to subscribed users
 
       let newUserMessage = {
-        data: JSON.stringify({
-          users: palantirWebSocket.users
+        data: JSON.stringify({ ...palantirWebSocket.users
         }),
         type: _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLServerMessageTypes.Users
       };
       palantirWebSocket.socket.publish('space/main', JSON.stringify(newUserMessage));
+      break;
+
+    case _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLClientMessageTypes.RtcSignal:
+      let date = new Date();
+      let time = `${date.getMinutes()}:${date.getSeconds()}${date.getMilliseconds()}`;
+      console.warn('[RtcSignal] signal exchange', time);
+      let signal = {
+        data: message.data,
+        type: _palantir_protocol__WEBPACK_IMPORTED_MODULE_0__.PQLServerMessageTypes.RtcSignal
+      };
+      palantirWebSocket.socket.publish('space/main', JSON.stringify(signal));
       break;
     // case PQLClientMessageTypes.Disconnected:
     //   console.log('[Disconnected] should remove user')
@@ -128,6 +136,7 @@ let PQLClientMessageTypes;
 (function (PQLClientMessageTypes) {
   PQLClientMessageTypes[PQLClientMessageTypes["ConnectionInit"] = 0] = "ConnectionInit";
   PQLClientMessageTypes[PQLClientMessageTypes["Disconnected"] = 1] = "Disconnected";
+  PQLClientMessageTypes[PQLClientMessageTypes["RtcSignal"] = 2] = "RtcSignal";
 })(PQLClientMessageTypes || (PQLClientMessageTypes = {}));
 
 let PQLServerMessageTypes;
@@ -135,6 +144,7 @@ let PQLServerMessageTypes;
 (function (PQLServerMessageTypes) {
   PQLServerMessageTypes[PQLServerMessageTypes["Delivery"] = 0] = "Delivery";
   PQLServerMessageTypes[PQLServerMessageTypes["Users"] = 1] = "Users";
+  PQLServerMessageTypes[PQLServerMessageTypes["RtcSignal"] = 2] = "RtcSignal";
 })(PQLServerMessageTypes || (PQLServerMessageTypes = {}));
 
 /***/ }),

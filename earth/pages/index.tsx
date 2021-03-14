@@ -1,9 +1,18 @@
-import { usePalantir } from '../utils/hooks/use-palantir'
+import MainView from '../components/MainView'
+import {
+  usePalantirManager,
+  PalantirContextProvider,
+  PalantirContext,
+} from '../utils/PalantirContext'
 
 function HomePage() {
-  usePalantir()
+  const palantirManager = usePalantirManager()
 
-  return <div>yay</div>
+  return (
+    <PalantirContext.Provider value={palantirManager}>
+      <MainView />
+    </PalantirContext.Provider>
+  )
 }
 
 export default HomePage

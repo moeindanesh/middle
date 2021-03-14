@@ -1,4 +1,8 @@
-import { PalantirWebSocket } from './palantir-protocol'
+import {
+  PalantirWebSocket,
+  PQLServerMessage,
+  PQLServerMessageTypes,
+} from './palantir-protocol'
 
 export const onClose = (
   palantirWebSocket: PalantirWebSocket,

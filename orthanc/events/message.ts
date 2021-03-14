@@ -18,7 +18,7 @@ export const onMessage = (
 
   let message = parseMessage(rawMessage)
 
-  console.warn({ message })
+  // console.warn({ message })
 
   palantirWebSocket.socket.send(deliveryMessage(message.id))
 
@@ -32,13 +32,23 @@ export const onMessage = (
 
       // publish to subscribed users
       let newUserMessage: PQLServerMessage = {
-        data: JSON.stringify({ users: palantirWebSocket.users }),
+        data: JSON.stringify({ ...palantirWebSocket.users }),
         type: PQLServerMessageTypes.Users,
       }
       palantirWebSocket.socket.publish(
         'space/main',
         JSON.stringify(newUserMessage),
       )
+      break
+    case PQLClientMessageTypes.RtcSignal:
+      let date = new Date()
+      let time = `${date.getMinutes()}:${date.getSeconds()}${date.getMilliseconds()}`
+      console.warn('[RtcSignal] signal exchange', time)
+      let signal: PQLServerMessage = {
+        data: message.data,
+        type: PQLServerMessageTypes.RtcSignal,
+      }
+      palantirWebSocket.socket.publish('space/main', JSON.stringify(signal))
       break
     // case PQLClientMessageTypes.Disconnected:
     //   console.log('[Disconnected] should remove user')

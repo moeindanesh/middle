@@ -4,11 +4,13 @@ import { Users } from '../model/Users'
 export enum PQLClientMessageTypes {
   ConnectionInit,
   Disconnected,
+  RtcSignal,
 }
 
 export enum PQLServerMessageTypes {
   Delivery,
   Users,
+  RtcSignal,
 }
 
 export interface PQLServerMessage {

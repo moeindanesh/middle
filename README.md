@@ -26,3 +26,10 @@ $ cd middle
 $ yarn
 $ yarn dev
 ```
+
+---
+
+### PalantirQL
+
+Palantir is a super simple protocol
+We used this protocol in **Middle** project, so middle is an example itself

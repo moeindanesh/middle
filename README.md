@@ -8,13 +8,13 @@
 
 ## Stack Information
 
-| Concern                | Solution                                                       |
-| ---------------------- | -------------------------------------------------------------- |
-| Server                 | [Node](https://nodejs.org/)                                    |
-| Server Framework       | [uWebSockts.js](https://github.com/uNetworking/uWebSockets.js) |
-| Data Transport         | PalantirQL                                                     |
-| Real-time Connectivity | [WebRtc](https://webrtc.org)                                   |
-| UI Framework           | [NextJs](https://nextjs.org/)                                  |
+| Concern                | Solution                                                                    |
+| ---------------------- | --------------------------------------------------------------------------- |
+| Server                 | [Node](https://nodejs.org/)                                                 |
+| Server Framework       | [uWebSockts.js](https://github.com/uNetworking/uWebSockets.js)              |
+| Data Transport         | [PalantirQL](https://github.com/moeindanesh/middle/tree/master/#palantirql) |
+| Real-time Connectivity | [WebRtc](https://webrtc.org)                                                |
+| UI Framework           | [NextJs](https://nextjs.org/)                                               |
 
 ---
 

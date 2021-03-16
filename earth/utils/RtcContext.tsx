@@ -88,7 +88,7 @@ export const useRtcManager = ({
     }) => {
       if (!palantirManager.currentUser) return
       if (senderId === palantirManager.currentUser.id) return
-      onSignal(recipientId, signal)
+      onSignal(senderId, signal)
     }
   }, [onSignal, palantirManager.currentUser, palantirManager.onSignalReceived])
 

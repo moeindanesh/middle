@@ -6,7 +6,7 @@ import {
 } from '@middle/earth/utils/rtc-peer'
 import { UserData } from '@middle/orthanc/model/types'
 import { Draft } from 'immer'
-import React, { useCallback, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useImmerReducer } from 'use-immer'
 import { useLatest } from './use-latest'
 
@@ -29,13 +29,59 @@ export const useRtcPeers = ({
 
   const rtcStateRef: { current: RtcState | undefined } = useLatest(state)
 
+  let [screenStream, setScreenStream] = useState<MediaStream | undefined>(
+    undefined,
+  )
+
+  // get screen stream
+  const getScreenStream = () => {
+    navigator.mediaDevices
+      //@ts-ignore
+      .getDisplayMedia({
+        video: true,
+        audio: false,
+      })
+      .then((stream: MediaStream) => {
+        setScreenStream(stream)
+      })
+      .catch(error => {
+        console.error(error)
+      })
+  }
+  useEffect(() => {
+    if (!state.weSharingScreen) return
+    getScreenStream()
+  }, [state.weSharingScreen])
+
+  // stop screen stream
+  useEffect(() => {
+    if (state.weSharingScreen) return
+    if (!screenStream) return
+
+    screenStream.getTracks().forEach(track => track.stop())
+    setScreenStream(undefined)
+  }, [screenStream, state.weSharingScreen])
+
   const getStreamForUser = useCallback(() => {
     let tracksMap: RtcTracksConfig<TrackName> = new Map([
       ['screen', { kind: 'video', track: null, streamKey: 'screen' }],
     ])
 
-    return { tracksMap }
-  }, [])
+    let screenTracks
+    let _ScreenStream
+
+    if (screenStream) {
+      screenTracks = screenStream.getVideoTracks()[0]
+      _ScreenStream = new MediaStream([screenTracks])
+      tracksMap.set('screen', {
+        kind: 'video',
+        track: screenTracks,
+        streamKey: 'screen',
+      })
+    }
+
+    return { tracksMap, screenStream: _ScreenStream, screenTracks }
+  }, [screenStream])
 
   const createPeer = useCallback(
     ({
@@ -66,8 +112,6 @@ export const useRtcPeers = ({
 
       let isPolitePeer = !getIsFirstJoined(currentUser.time, _participant.time)
       let isOfferer = getIsFirstJoined(currentUser.time, _participant.time)
-
-      console.log('our participant is', { isPolitePeer, isOfferer })
 
       let { tracksMap } = getStreamForUser()
 
@@ -154,6 +198,61 @@ export const useRtcPeers = ({
   }, [callId, createPeer, currentUser, participants, rtcStateRef])
 
   /**
+   * Data channel
+   */
+
+  const sendToParticipant = (
+    participant: Participant,
+    data: DataChannelPortocol,
+  ) => {
+    if (
+      !participant ||
+      !participant.peer ||
+      participant.peer.state !== 'connected'
+    ) {
+      console.warn('[sendToParticipant] participant is not ready')
+      return false
+    }
+
+    try {
+      participant.peer.sendJson(data)
+      return true
+    } catch (error) {
+      console.error('[sendToParticipant]', { error })
+      return false
+    }
+  }
+
+  const sendToAll = useCallback(
+    (data: DataChannelPortocol) => {
+      let participants = state.participants
+      for (let userId of Object.keys(participants)) {
+        let participant = participants[userId]
+        if (!participant) continue
+        sendToParticipant(participant, data)
+      }
+    },
+    [state.participants],
+  )
+
+  /**
+   * participants deck
+   */
+
+  // sharing screen state changed
+  useEffect(() => {
+    if (typeof state.weSharingScreen === 'undefined') return
+    if (!currentUser) return
+
+    let data: DataChannelPortocol = {
+      type: 'sharing screen changed',
+      state: state.weSharingScreen,
+      userId: currentUser.id,
+    }
+    sendToAll(data)
+  }, [currentUser, sendToAll, state.weSharingScreen])
+
+  /**
    * Attach event handlers to peer
    */
 
@@ -163,16 +262,28 @@ export const useRtcPeers = ({
       const userId = eventContext.userId
       const peer = eventContext.peer
 
-      const handleData = () => {
-        console.log('[handleData] new data received')
+      const handleData = (rawData: string) => {
+        let data: DataChannelPortocol = JSON.parse(rawData)
+        switch (data.type) {
+          case 'sharing screen changed':
+            dispatch({
+              type: 'participant sharing screen changed',
+              state: data.state,
+              userId: data.userId,
+            })
+        }
       }
 
       const handleDataOpen = () => {
-        console.log('[handleDataOpen]')
+        console.info('[handleDataOpen]')
       }
 
-      const handleTrack = () => {
-        console.log('[handleTrack]')
+      const handleTrack = (event: RTCTrackEvent) => {
+        let track = event.track
+        let stream = new MediaStream([track])
+        if (track.kind === 'video') {
+          dispatch({ type: 'got track', userId, kind: 'screen', stream })
+        }
       }
 
       const handleError = () => {
@@ -214,6 +325,8 @@ export const useRtcPeers = ({
     state.participants,
   ])
 
+  const currentParticipantsRef = useLatest(currentParticipants)
+
   let peerNumbers = useMemo(() => {
     let count = 0
 
@@ -253,6 +366,39 @@ export const useRtcPeers = ({
       }
     }
   }, [attachPeerEventHandlers, rtcStateRef, peersCount])
+
+  const addStreams = useCallback(
+    ({
+      participant,
+      stream,
+    }: {
+      participant: Participant
+      stream: MediaStream
+    }) => {
+      if (!participant || !participant.peer) return
+      if (!stream) return
+
+      let { peer, userId } = participant
+      let weSharingScreen = state.weSharingScreen
+
+      if (weSharingScreen) {
+        let videoTracks = stream.getVideoTracks()[0]
+        peer.setTrack('screen', videoTracks)
+      } else {
+        peer.replaceTrack('screen', null)
+      }
+    },
+    [state.weSharingScreen],
+  )
+
+  // add screen stream
+  useEffect(() => {
+    if (!screenStream) return
+
+    for (let participant of currentParticipantsRef.current || []) {
+      addStreams({ participant, stream: screenStream })
+    }
+  }, [addStreams, currentParticipantsRef, screenStream, state.weSharingScreen])
 
   return {
     onSignal: useCallback(
@@ -318,6 +464,8 @@ export interface RtcState {
   participants: {
     [userId: string]: Participant
   }
+
+  weSharingScreen?: boolean
 }
 
 export const initialRtcState: RtcState = {
@@ -350,12 +498,32 @@ export type RtcAction =
       userId: string
       state: RtcConnectionStateType
     }
+  | {
+      type: 'sharing screen started'
+    }
+  | {
+      type: 'sharing screen stopped'
+    }
+  | {
+      type: 'participant sharing screen changed'
+      userId: string
+      state: boolean
+    }
+  | {
+      type: 'got track'
+      userId: string
+      kind: 'screen'
+      stream: MediaStream
+    }
 
 interface Participant {
   peerState?: RtcConnectionStateType
   peer?: RtcPeerType | undefined
   userId: string | undefined
   joinTime: string
+  isSharingScreen?: boolean
+
+  screenStream?: MediaStream | undefined
 }
 
 function rtcReducer(
@@ -376,6 +544,12 @@ function rtcReducer(
       }
       break
     case 'new peer created':
+      let oldParticipantIds = Object.keys(draft.participants)
+      for (let participantId of oldParticipantIds) {
+        delete draft.participants[participantId]
+      }
+
+      // create new participant
       draft.participants[action.userId] = {
         userId: action.userId,
         peer: action.peer,
@@ -395,7 +569,34 @@ function rtcReducer(
       draft.participants[action.userId].peerState = action.state
       break
 
+    case 'sharing screen started':
+      draft.weSharingScreen = true
+      break
+
+    case 'sharing screen stopped':
+      draft.weSharingScreen = false
+      break
+
+    case 'participant sharing screen changed':
+      if (!draft.participants[action.userId]) return
+      draft.participants[action.userId].isSharingScreen = action.state
+      break
+
+    case 'got track':
+      let participant = draft.participants[action.userId]
+      if (!participant) return
+
+      if (action.kind === 'screen') {
+        participant.screenStream = action.stream
+      }
+
     default:
       break
   }
+}
+
+type DataChannelPortocol = {
+  type: 'sharing screen changed'
+  userId: string
+  state: boolean
 }
